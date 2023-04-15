@@ -1,6 +1,8 @@
 import mongoose from "mongoose";
 import authRoles from "../utils/authRoles";
-import bcrypt from "bcryptjs"
+import bcrypt from "bcryptjs";
+import JWT from "jsonwebtoken";
+import config from "../config";
 
 const { schema } = mongoose;
 
@@ -34,7 +36,7 @@ const userSchema = new schema(
             enum: Object.values(authRoles),
             default: authRoles.USER
         },
-        forgotPasswordToke: String,
+        forgotPasswordToken: String,
         forgotPasswordExpiry: Date
     },
     {
@@ -52,6 +54,24 @@ userSchema.methods = {
     //compare password
     comparePassword: async function (enteredPassword) {
         return await bcrypt.comparePassword(enteredPassword, this.password);
+    },
+
+    getJWTtoken: async function () {
+        JWT.sign({
+            _id: this._id
+        }, config.JWT_SECRET_TOKEN, {
+            expiresIn: config.JWT_EXPIRY_TOKEN
+        })
+    },
+
+    //generate forgotten password
+    generateForgotPasswordToken: function () {
+        const forgotToken = crypto.ranomBytes(20).toString("hex");
+        this.forgotPasswordToken = crypto.createHash("sha256").update(forgotToken).digest("hex")
+
+        //time for token to expire
+        this.forgotPasswordExpiry = Date.now() + 20 * 60 * 1000;
+        return forgotToken;
     }
 }
 
